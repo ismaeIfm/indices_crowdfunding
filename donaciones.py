@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import csv
 import string
 
 import numpy as np
@@ -46,7 +49,7 @@ Re1 = MCo.groupby([u'anio', u'mes']).size().reset_index(
     name="ProyectosTotales")
 Re1_a = MCo.groupby([u'anio', u'mes', u'Categoría']).size().reset_index(
     name="ProyectosTotales")
-Re1_b = MCo.groupby([u'anio', u'mes', u'Sexo']).size().reset_index(
+Re1_b = MCo.fillna("").groupby([u'anio', u'mes', u'Sexo']).size().reset_index(
     name="ProyectosTotales")
 
 Re2 = MCo.loc[MCo['exito'] == 1].groupby([u'anio', u'mes']).size().reset_index(
@@ -54,17 +57,17 @@ Re2 = MCo.loc[MCo['exito'] == 1].groupby([u'anio', u'mes']).size().reset_index(
 Re2_a = MCo.loc[MCo['exito'] == 1].groupby([u'anio', u'mes',
                                             u'Categoría']).size().reset_index(
                                                 name="ProyectosTotales")
-Re2_b = MCo.loc[MCo['exito'] == 1].groupby([u'anio', u'mes',
-                                            u'Sexo']).size().reset_index(
-                                                name="ProyectosTotales")
+Re2_b = MCo.fillna("").loc[MCo['exito'] == 1].groupby(
+    [u'anio', u'mes', u'Sexo']).size().reset_index(name="ProyectosTotales")
 
 Re3 = MCo.groupby([u'anio', u'mes'])['obtenido'].sum().reset_index(
     name="ProyectosTotales")
 Re3_a = MCo.groupby([u'anio', u'mes',
                      u'Categoría'])['obtenido'].sum().reset_index(
                          name="ProyectosTotales")
-Re3_b = MCo.groupby([u'anio', u'mes', u'Sexo'])['obtenido'].sum().reset_index(
-    name="ProyectosTotales")
+Re3_b = MCo.fillna("").groupby([u'anio', u'mes',
+                                u'Sexo'])['obtenido'].sum().reset_index(
+                                    name="ProyectosTotales")
 Re3_c = MCo.groupby([u'anio', u'mes', u'exito'])['obtenido'].sum().reset_index(
     name="ProyectosTotales")
 
@@ -73,22 +76,22 @@ Re4 = MCo.groupby([u'anio', u'mes'])['exito'].mean().reset_index(
 Re4_a = MCo.groupby([u'anio', u'mes',
                      u'Categoría'])['exito'].mean().reset_index(
                          name="ProyectosTotales")
-Re4_b = MCo.groupby([u'anio', u'mes', u'Sexo'])['exito'].mean().reset_index(
-    name="ProyectosTotales")
+Re4_b = MCo.fillna("").groupby([u'anio', u'mes',
+                                u'Sexo'])['exito'].mean().reset_index(
+                                    name="ProyectosTotales")
 
-Re5 = MCFon.groupby(
+Re5 = MCFon.fillna("").groupby(
     [u'anio', u'mes'])[u'Usuario Fondeador (Anónimo)'].nunique().reset_index(
         name="ProyectosTotales")
-Re5_a = MCFon.groupby(
+Re5_a = MCFon.fillna("").groupby(
     [u'anio', u'mes',
      u'Sexo'])[u'Usuario Fondeador (Anónimo)'].nunique().reset_index(
          name="ProyectosTotales")
 
-Re6 = MCFon.groupby(
+Re6 = MCFon.fillna("").groupby(
     [u'anio', u'mes'])[u'Usuario Fondeador (Anónimo)'].nunique().reset_index(
         name="ProyectosTotales")
-
-Re6_a = MCFon.groupby(
+Re6_a = MCFon.fillna("").groupby(
     [u'anio', u'mes',
      u'Sexo'])[u'Usuario Fondeador (Anónimo)'].nunique().reset_index(
          name="ProyectosTotales")
@@ -109,7 +112,8 @@ def function(name):
         dataframe[u'Clave'] = list(dataframe)[2]
         dataframe = dataframe.rename(columns={dataframe.columns[2]: u'Valor'})
         dataframe[u'Valor'] = dataframe[u'Valor'].astype(str)
-        dataframe[u'Clave'] = dataframe[u'Clave'] + '-' + dataframe[u'Valor']
+        dataframe.loc[dataframe[u'Valor'] == "", u'Clave'] = "Total"
+        dataframe[u'id3'] = dataframe[u'Clave'] + '-' + dataframe[u'Valor']
 
     return dataframe
 
@@ -128,3 +132,36 @@ ids = ['i3%s' % i for i in range(1, len(var1) + 1)]
 IDs = pd.DataFrame({'Var1': var1, 'id': ids})
 
 MiCochinito = pd.merge(MiCochinito, IDs, how='left', on=[u'Var1'])
+
+ids2 = []
+for id_name, dt in MiCochinito[[u'id',
+                                u'id3']].drop_duplicates().groupby('id'):
+    mapping_ids2 = dict(zip(dt[u'id3'].unique(), string.lowercase))
+    dt['id2'] = dt['id3'].map(lambda x: mapping_ids2[x])
+    ids2.append(dt)
+ID2 = pd.concat(ids2)
+
+MiCochinito = pd.merge(MiCochinito, ID2, how='left', on=[u'id3', u'id'])
+
+MiCochinito = MiCochinito[[
+    u'id', u'cve', u'anio', u'ProyectosTotales', u'mes', 'id2'
+]]
+MiCochinito = MiCochinito.rename(
+    columns={u'anio': u't',
+             u'ProyectosTotales': u'valor',
+             u'mes': u'm'})
+MiCochinito[u'DesGeo'] = MiCochinito[u'cve'].map(
+    lambda x: 'N' if x == 0 else 'E')
+MiCochinito = MiCochinito.loc[MiCochinito[u't'] != ""]
+MiCochinito[u'm'] = MiCochinito[u'm'].map(
+    lambda x: 1 if x < 4 else 2 if x < 7 else 3 if x < 9 else 4)
+
+DesGeo = MiCochinito[['id', 'DesGeo']].drop_duplicates()
+RangeT = MiCochinito[['id', 't', 'm']].drop_duplicates().rename(
+    columns={"t": "ranget",
+             "m": "rangem"})
+
+MiCochinito.to_csv('MiCochinitoData.csv', index=False)
+DesGeo.to_csv('MiCochinitoDesGeo.csv', index=False)
+ID2.to_csv('MiCochinitoCodigosGrupos.csv', index=False)
+RangeT.to_csv('MiCochinitoRangosTemporales.csv', index=False)
