@@ -6,19 +6,25 @@ import string
 import numpy as np
 import pandas as pd
 
-with open('data/Mi Cochinito.xlsx', 'r') as f:
+fname = 'data/Mi Cochinito 2017.xlsx'
+with open(fname, 'r') as f:
     MC = pd.read_excel(f, sheetname='Proyecto')
-with open('data/Mi Cochinito.xlsx', 'r') as f:
+with open(fname, 'r') as f:
     MC2 = pd.read_excel(f, sheetname='Usuario')
-with open('data/Mi Cochinito.xlsx', 'r') as f:
+with open(fname, 'r') as f:
     MC3 = pd.read_excel(f, sheetname='Fondeo')
 
 MC = MC.rename(columns={u'Usuario Creador (Anónimo)': u'Usuario'})
 MCo = pd.merge(MC, MC2, how='left', on=[u'Usuario'])
-MCo['pedido'] = MCo[u'Monto Pedido'].apply(
-    lambda x: float(x.replace('$', '').replace(',', '')))
-MCo['obtenido'] = MCo[u'Monto recaudado'].apply(
-    lambda x: float(x.replace('$', '').replace(',', '')))
+
+#MCo['pedido'] = MCo[u'Monto Pedido'].apply(
+#    lambda x: float(x.replace('$', '').replace(',', '')))
+MCo['pedido'] = MCo[u'Monto Pedido']
+
+#MCo['obtenido'] = MCo[u'Monto recaudado'].apply(
+#    lambda x: float(x.replace('$', '').replace(',', '')))
+MCo['obtenido'] = MCo[u'Monto recaudado']
+
 MCo['exito'] = (MCo.pedido <= MCo.obtenido).apply(lambda x: 1 if x else 0)
 
 dates = MC3['Fecha'].str.split(',').apply(pd.Series, 1).stack()
@@ -112,8 +118,10 @@ def function(name):
         dataframe[u'Clave'] = list(dataframe)[2]
         dataframe = dataframe.rename(columns={dataframe.columns[2]: u'Valor'})
         dataframe[u'Valor'] = dataframe[u'Valor'].astype(str)
-        dataframe.loc[dataframe[u'Valor'] == "", u'Clave'] = "Total"
-        dataframe[u'id3'] = dataframe[u'Clave'] + '-' + dataframe[u'Valor']
+        dataframe.loc[dataframe[u'Valor'] == '', u'Clave'] = "Total"
+        dataframe.loc[dataframe[u'Valor'] == '', u'id3'] = dataframe[u'Clave']
+        dataframe.loc[dataframe[u'Valor'] != '',
+                      u'id3'] = dataframe[u'Clave'] + '-' + dataframe[u'Valor']
 
     return dataframe
 
@@ -152,7 +160,8 @@ MiCochinito = MiCochinito.rename(
              u'mes': u'm'})
 MiCochinito[u'DesGeo'] = MiCochinito[u'cve'].map(
     lambda x: 'N' if x == 0 else 'E')
-MiCochinito = MiCochinito.loc[MiCochinito[u't'] != ""]
+print MiCochinito[u't'].dtype
+#MiCochinito = MiCochinito.loc[MiCochinito[u't'] != ""]
 MiCochinito[u'm'] = MiCochinito[u'm'].map(
     lambda x: 1 if x < 4 else 2 if x < 7 else 3 if x < 9 else 4)
 
@@ -163,5 +172,5 @@ RangeT = MiCochinito[['id', 't', 'm']].drop_duplicates().rename(
 
 MiCochinito.to_csv('MiCochinitoData.csv', index=False)
 DesGeo.to_csv('MiCochinitoDesGeo.csv', index=False)
-ID2.to_csv('MiCochinitoCodigosGrupos.csv', index=False)
 RangeT.to_csv('MiCochinitoRangosTemporales.csv', index=False)
+ID2.to_csv('MiCochinitoCodigosGrupos.csv', index=False)
