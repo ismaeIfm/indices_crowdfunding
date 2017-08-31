@@ -1,10 +1,12 @@
 import io
+import string
 
 import numpy as np
 import pandas as pd
 import requests
 
-url = "http://www.correosdemexico.gob.mx/datosabiertos/cp/cpdescarga.txt"
+#url = "http://www.correosdemexico.gob.mx/datosabiertos/cp/cpdescarga.txt"
+url = 'cpdescarga.txt'
 CP = pd.read_csv(url, sep='|', skiprows=1)
 
 CP = CP[[u'd_codigo', u'c_estado']].drop_duplicates().rename(
@@ -370,12 +372,15 @@ def estatal(name):
     title = name.replace('_', '.')
     dataframe['Title'] = title
     if len(dataframe.columns) == 5:
-        dataframe[u'Valor'] = np.nan
-        dataframe[u'Clave'] = np.nan
+        dataframe[u'Valor'] = ""
+        dataframe[u'Clave'] = "Total"
+        dataframe[u'id3'] = "Total"
     else:
         dataframe[u'Clave'] = list(dataframe)[3]
         dataframe = dataframe.rename(columns={dataframe.columns[3]: u'Valor'})
         dataframe[u'Valor'] = dataframe[u'Valor'].astype(str)
+        dataframe[u'id3'] = dataframe[u'Clave'] + '-' + dataframe[u'Valor']
+
     return dataframe
 
 
@@ -388,3 +393,42 @@ Estatal = pd.concat([
         'T7', 'T8', 'T8_a', 'T8_b', 'T8_c', 'T8_d'
     ]
 ])
+
+Prestadero = pd.concat([Estatal, Final])
+s = Prestadero['Title'].apply(lambda x: x.split('.'))
+
+Prestadero['Var1'] = s.apply(lambda x: x[0])
+Prestadero['Var2'] = s.apply(lambda x: x[1] if len(x) == 2 else np.nan)
+Prestadero = Prestadero.drop("Title", 1)
+
+var1 = Prestadero['Var1'].unique()
+ids = ['i1%s' % i for i in range(1, len(var1) + 1)]
+
+IDs = pd.DataFrame({'Var1': var1, 'id': ids})
+Prestadero = pd.merge(Prestadero, IDs, how='left', on=[u'Var1'])
+
+ids2 = []
+for id_name, dt in Prestadero[[
+        u'id', u'id3'
+]].dropna().drop_duplicates().dropna().groupby('id'):
+    mapping_ids2 = dict(zip(dt[u'id3'].unique(), string.lowercase))
+    dt['id2'] = dt['id3'].map(lambda x: mapping_ids2[x])
+    ids2.append(dt)
+ID2 = pd.concat(ids2)
+
+Prestadero = pd.merge(Prestadero, ID2, how='left', on=[u'id3', u'id'])
+Prestadero = Prestadero[[
+    u'id', u'cve', u'anio', u'ProyectosTotales', u'mes', 'id2'
+]]
+Prestadero = Prestadero.rename(
+    columns={u'anio': u't',
+             u'ProyectosTotales': u'valor',
+             u'mes': u'm'})
+Prestadero[u'DesGeo'] = Prestadero[u'cve'].map(
+    lambda x: 'N' if x == 0 else 'E')
+Prestadero = Prestadero.drop_duplicates()
+
+Prestadero = Prestadero.drop(
+    Prestadero[Prestadero['cve'].map(lambda x: x == "")].index)
+Prestadero = Prestadero.drop(
+    Prestadero[Prestadero['t'].map(lambda x: x == 0)].index)
