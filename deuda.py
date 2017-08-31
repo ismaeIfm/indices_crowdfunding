@@ -14,13 +14,15 @@ CP = pd.read_csv(url, sep='|', skiprows=1)
 CP = CP[[u'd_codigo', u'c_estado']].drop_duplicates().rename(
     columns={"d_codigo": "codigo_postal"})
 
-Prestadero3 = pd.read_csv('data/Deuda/FONDEADORES, DATOS BÁSICOS.csv')
+Prestadero3 = pd.read_csv('data/Deuda/kubo_usuario_ord.csv')
 Prestadero3[u'codigo_postal'] = pd.to_numeric(
     Prestadero3[u'codigo_postal'], errors='coerce').fillna(0).astype(np.int64)
 Prestadero3 = pd.merge(Prestadero3, CP, how='left', on=[u'codigo_postal'])
 
-Prestadero1 = pd.read_csv('data/Deuda/CRÉDITOS DATA.csv')
-Prestadero2 = pd.read_csv('data/Deuda/DATOS DE FONDEO.csv')
+Prestadero1 = pd.read_csv('data/Deuda/proyecto.csv')
+Prestadero2 = pd.read_csv('data/Deuda/fondeo_kubo.csv')
+
+Prestadero1[u'plazo_meses'] = Prestadero1[u'plazo_meses'] // 30
 
 Prestadero = pd.merge(Prestadero1, Prestadero3, how='left', on=[u'id_usuario'])
 Prestadero2 = Prestadero2.rename(
@@ -43,10 +45,10 @@ T1_a = Prestadero.groupby([u'anio', u'mes', u'categoria']).size().reset_index(
     name="ProyectosTotales")
 T1_a['cve'] = 0
 
-Prestadero.loc[Prestadero[u'indicador_para_genero'] == 'Sr.',
+Prestadero.loc[Prestadero[u'indicador_para_genero'] == 'M',
                u'genero'] = "Masculino"
 
-Prestadero.loc[Prestadero[u'indicador_para_genero'] == 'Sra.',
+Prestadero.loc[Prestadero[u'indicador_para_genero'] == 'F',
                u'genero'] = "Femenino"
 
 Prestadero[u'genero'] = Prestadero[u'genero'].fillna("")
@@ -213,6 +215,7 @@ def function(name):
         dataframe[u'Clave'] = list(dataframe)[2]
         dataframe = dataframe.rename(columns={dataframe.columns[2]: u'Valor'})
         dataframe[u'Valor'] = dataframe[u'Valor'].astype(str)
+        print title
         dataframe[u'id3'] = dataframe[u'Clave'] + '-' + dataframe[u'Valor']
 
     return dataframe
@@ -417,7 +420,10 @@ ids2 = []
 for id_name, dt in Prestadero[[
         u'id', u'id3'
 ]].dropna().drop_duplicates().dropna().groupby('id'):
-    mapping_ids2 = dict(zip(dt[u'id3'].unique(), string.lowercase))
+
+    mapping_ids2 = dict(
+        zip(dt[u'id3'].unique(), string.lowercase + string.ascii_uppercase))
+    print id_name, dt, mapping_ids2
     dt['id2'] = dt['id3'].map(lambda x: mapping_ids2[x])
     ids2.append(dt)
 ID2 = pd.concat(ids2)
@@ -447,7 +453,7 @@ RangeT = Prestadero[['id', 't', 'm']].drop_duplicates().rename(
     columns={"t": "ranget",
              "m": "rangem"})
 
-Prestadero.to_csv('PrestaderoData.csv', index=False)
-DesGeo.to_csv('PrestaderoDesGeo.csv', index=False)
-RangeT.to_csv('PrestaderoRangosTemporales.csv', index=False)
-ID2.to_csv('PrestaderoCodigosGrupos.csv', index=False)
+Prestadero.to_csv('KuboData.csv', index=False)
+DesGeo.to_csv('KuboDesGeo.csv', index=False)
+RangeT.to_csv('KuboRangosTemporales.csv', index=False)
+ID2.to_csv('KuboCodigosGrupos.csv', index=False)
