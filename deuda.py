@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import io
 import string
 
@@ -203,12 +205,16 @@ def function(name):
     title = name.replace('_', '.')
     dataframe['Title'] = title
     if len(dataframe.columns) == 5:
-        dataframe[u'Valor'] = np.nan
-        dataframe[u'Clave'] = np.nan
+        dataframe[u'Valor'] = ""
+        dataframe[u'Clave'] = "Total"
+        dataframe[u'id3'] = "Total"
+
     else:
         dataframe[u'Clave'] = list(dataframe)[2]
         dataframe = dataframe.rename(columns={dataframe.columns[2]: u'Valor'})
         dataframe[u'Valor'] = dataframe[u'Valor'].astype(str)
+        dataframe[u'id3'] = dataframe[u'Clave'] + '-' + dataframe[u'Valor']
+
     return dataframe
 
 
@@ -432,3 +438,16 @@ Prestadero = Prestadero.drop(
     Prestadero[Prestadero['cve'].map(lambda x: x == "")].index)
 Prestadero = Prestadero.drop(
     Prestadero[Prestadero['t'].map(lambda x: x == 0)].index)
+
+Prestadero[u'm'] = Prestadero[u'm'].map(
+    lambda x: 1 if x < 4 else 2 if x < 7 else 3 if x < 9 else 4)
+
+DesGeo = Prestadero[['id', 'DesGeo']].drop_duplicates()
+RangeT = Prestadero[['id', 't', 'm']].drop_duplicates().rename(
+    columns={"t": "ranget",
+             "m": "rangem"})
+
+Prestadero.to_csv('PrestaderoData.csv', index=False)
+DesGeo.to_csv('PrestaderoDesGeo.csv', index=False)
+RangeT.to_csv('PrestaderoRangosTemporales.csv', index=False)
+ID2.to_csv('PrestaderoCodigosGrupos.csv', index=False)
